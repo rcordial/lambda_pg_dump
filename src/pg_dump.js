@@ -13,9 +13,9 @@ async function pgdump(event, secret) {
         // set file name, file path
         let date = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '').replace(' ','_');
         
-        // format and args, could be made flexible later on
-        let format = '.backup';
-        let args = '-Fc -Z1';
+        // optional plain parameter to output plain sql file
+        let format = event.PLAIN? '.sql' : '.backup';
+        let args = event.PLAIN? '' : '-Fc -Z1';
         
         let fileName = `${secret.PGDATABASE}-${date}${format}`;
         let filePath = path.join('/tmp', `${secret.PGDATABASE}-${date}${format}`)
@@ -43,19 +43,39 @@ async function pgdump(event, secret) {
                 return reject(new Error(`pg_dump failed: ${error}`));
             }
 
-            // check the PGDMP string to test whether pgdump wrote the correct file
-            exec(`head -n 1 ${filePath}`,  (error, stdout, stderr) => {
-                
-                if(stdout.startsWith('PGDMP')){
-                    // correct output, if expected string is found at the first line of the file 
-                    return resolve({
-                        fileName,filePath
-                    });
-                }else{
-                    return reject(new Error(`pg_dump failed, unexpected error`));
-                }
+            if(event.PLAIN){
 
-            });
+                // check the dump complete message at end of file
+                exec(`tail -n 3 ${filePath}`,  (error, stdout, stderr) => {
+                    
+                    if(stdout.toLowerCase().includes('postgresql database dump complete')){
+                        // correct output, if expected string is found at the last set of lines of plaintext file 
+                        return resolve({
+                            fileName,filePath
+                        });
+                    }else{
+                        return reject(new Error(`pg_dump failed, unexpected error`));
+                    }
+
+                });
+
+            }else{
+
+                // check the PGDMP string to test whether pgdump wrote the correct file
+                exec(`head -n 1 ${filePath}`,  (error, stdout, stderr) => {
+                    
+                    if(stdout.startsWith('PGDMP')){
+                        // correct output, if expected string is found at the first line of the file 
+                        return resolve({
+                            fileName,filePath
+                        });
+                    }else{
+                        return reject(new Error(`pg_dump failed, unexpected error`));
+                    }
+
+                });
+                
+            }
 
         });
 
