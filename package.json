@@ -4,6 +4,7 @@
   "description": "Lambda that retrieves credentials from AWS Secrets Manager and runs the pg_dump utility to backup a postgres database to AWS S3",
   "main": "index.js",
   "scripts": {
+    "build": "build.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Reiland Cordial",
